@@ -1,7 +1,7 @@
 class OidcRequest < ApplicationRecord
   VALIDITY_WINDOW = 5.minutes
 
-  after_create :schedule_cleanup
+  after_destroy :schedule_cleanup
 
   scope :recent, ->(window = VALIDITY_WINDOW) { where("created_at > ?", window.ago) }
   scope :stale,  ->(window = VALIDITY_WINDOW) { where("created_at <= ?", window.ago) }
