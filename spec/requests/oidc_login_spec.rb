@@ -347,4 +347,84 @@ RSpec.describe OidcLoginController, type: :request do
       end
     end
   end
+
+  # ─── DELETE /auth/stale ─────────────────────────────────────────────
+
+  path '/auth/stale' do
+    delete 'Delete all stale OIDC login requests' do
+      tags 'OIDC Authentication'
+      produces 'application/json'
+      security []
+      description 'Deletes OidcRequest records that have exceeded the validity window and can no longer be used. Intended for testing and manual maintenance.'
+
+      security [{ bearerAuth: [] }]
+
+      response '200', 'stale requests deleted' do
+        schema type: :object,
+               properties: {
+                 deleted: { type: :integer, example: 3, description: 'Number of stale records deleted' }
+               },
+               required: %w[deleted]
+
+        let(:Authorization) do
+          user = User.create!(
+            name: 'admin', password: 'password', role_id: @roles[:admin].id,
+            full_name: 'Admin User', email: 'admin@ncsu.edu', institution: @institution
+          )
+          "Bearer #{user.generate_jwt}"
+        end
+
+        before do
+          create_oidc_request(state: 'stale-1').update_columns(created_at: 10.minutes.ago)
+          create_oidc_request(state: 'stale-2').update_columns(created_at: 10.minutes.ago)
+          create_oidc_request(state: 'fresh-1')
+        end
+
+        run_test! do |response|
+          json = JSON.parse(response.body)
+          expect(json['deleted']).to eq(2)
+        end
+      end
+
+      response '401', 'not authorized' do
+        schema type: :object,
+               properties: {
+                 error: { type: :string, example: 'Not Authorized' }
+               },
+               required: %w[error]
+
+        let(:Authorization) { nil }
+
+        run_test! do |response|
+          json = JSON.parse(response.body)
+          expect(json['error']).to eq('Not Authorized')
+        end
+      end
+
+      response '500', 'internal server error' do
+        schema type: :object,
+               properties: {
+                 error: { type: :string, example: 'Something went wrong' }
+               },
+               required: %w[error]
+
+        let(:Authorization) do
+          user = User.create!(
+            name: 'admin2', password: 'password', role_id: @roles[:admin].id,
+            full_name: 'Admin User 2', email: 'admin2@ncsu.edu', institution: @institution
+          )
+          "Bearer #{user.generate_jwt}"
+        end
+
+        before do
+          allow(OidcRequest).to receive(:stale).and_raise(ActiveRecord::StatementInvalid, 'DB error')
+        end
+
+        run_test! do |response|
+          json = JSON.parse(response.body)
+          expect(json['error']).to be_present
+        end
+      end
+    end
+  end
 end

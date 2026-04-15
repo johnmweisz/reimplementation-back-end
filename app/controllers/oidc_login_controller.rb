@@ -1,5 +1,6 @@
 class OidcLoginController < ApplicationController
   skip_before_action :authenticate_request!
+  before_action :authenticate_request!, only: [:cleanup_stale]
 
   rescue_from OidcConfig::ProviderNotFound do |e|
     render json: { error: e.message }, status: :not_found
@@ -7,6 +8,10 @@ class OidcLoginController < ApplicationController
 
   rescue_from OpenIDConnect::Discovery::DiscoveryFailed, Rack::OAuth2::Client::Error do |e|
     render json: { error: "Provider communication failed: #{e.message}" }, status: :bad_gateway
+  end
+
+  rescue_from StandardError do |e|
+    render json: { error: e.message }, status: :internal_server_error
   end
 
   # GET /auth/providers
@@ -20,6 +25,12 @@ class OidcLoginController < ApplicationController
     authorization_uri = OidcRequest.authorization_uri_for!(provider_key: params[:provider])
 
     render json: { redirect_uri: authorization_uri }
+  end
+
+  # DELETE /auth/stale
+  def cleanup_stale
+    deleted = OidcRequest.stale.delete_all
+    render json: { deleted: }, status: :ok
   end
 
   # POST /auth/callback
