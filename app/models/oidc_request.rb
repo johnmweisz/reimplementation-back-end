@@ -1,6 +1,8 @@
 class OidcRequest < ApplicationRecord
   VALIDITY_WINDOW = 5.minutes
 
+  after_create :schedule_cleanup
+
   scope :recent, ->(window = VALIDITY_WINDOW) { where("created_at > ?", window.ago) }
   scope :stale,  ->(window = VALIDITY_WINDOW) { where("created_at <= ?", window.ago) }
 
@@ -70,5 +72,11 @@ class OidcRequest < ApplicationRecord
       token_endpoint: discovery.token_endpoint,
       userinfo_endpoint: discovery.userinfo_endpoint
     )
+  end
+
+  private
+
+  def schedule_cleanup
+    CleanupStaleOidcRequestsJob.perform_later
   end
 end
