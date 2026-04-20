@@ -61,7 +61,7 @@ For OIDC login, Google should receive `openid email`.
 - `email` gives access to the email claim.
 - `openid` is required for an OIDC ID token.
 
-If you send only `email` without `openid`, OIDC token validation may fail.
+If you send only `email` without `openid`, OIDC token validation will fail.
 
 ---
 
@@ -121,7 +121,12 @@ Examples:
     export GOOG_REDIRECT_URI="<http_frontend_baseurl>/auth/callback"
     ```
 
-If you use Docker/Compose, put them in your env file and restart containers.
+If you use Docker Compose:
+
+- You can either add the env settings to the environment settings or
+  - If you use this option DO NOT commit Compose file
+- You can create a .env file and have docker compose reference it.  Then put the OIDC info in your env file and redeploy with Docker Compose.
+
 Docker .env example
 
 ```env
@@ -176,6 +181,7 @@ If you get an empty array, confirm env vars are present in the running process.
 
 - Usually means one or more required provider fields are blank after ERB eval.
 - Most often `GOOG_CLIENT_ID`, `GOOG_CLIENT_SECRET`, or `GOOG_REDIRECT_URI` is missing.
+- Error reporting can be found in the Rails logs.
 
 ### Redirect URI mismatch
 
