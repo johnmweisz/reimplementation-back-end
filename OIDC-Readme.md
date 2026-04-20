@@ -15,7 +15,7 @@ This guide explains how to configure `Google Cloud Console` so this Rails app ca
   - Vite/React Frontend
   - Ruby on Rails API (This project)
   - MySQL database
-  - Redis (not currently used, but may be in the future for offloading temporary OIDC tokens)
+  - Redis (currently used for caching, though not specifically for offloading temporary OIDC tokens)
 - The redirect URI that matches the app config exactly
     - Local example: `http://localhost:3000/auth/callback`
     - This value should come from `GOOG_REDIRECT_URI`
@@ -44,14 +44,14 @@ This guide explains how to configure `Google Cloud Console` so this Rails app ca
     - Developer contact email
         - For local dev use your email
 4. Choose **External** (unless you've been instructed otherwise for test/production).
-5. Agree to the api terms and create
+5. Agree to the API terms and create
 
 ### Configure Scopes
 1. Select `Data Access` in the left navigation
 2. Click Add/Remove **Scopes**
     - At a minimum we need to add:
-	    - `openid`
-	    - `email`, displays as `.../auth/userinfo.email`
+        - `openid`
+        - `email`, displays as `.../auth/userinfo.email`
         - `profile`, displays as `.../auth/userinfo.profile`
 
 #### Why not `email scope only`
@@ -149,9 +149,9 @@ If omitted, `OidcConfig.scopes_for` defaults to:
 If you want to restrict to email-focused login:
 
 - Keep `openid email`
-- Remove `profile` from both:
-    - `config/oidc_providers.yml`
-    - `app/controllers/oidc_login_controller.rb` in `authorization_uri(scope: ...)`
+- Remove `profile` from the actual scope source:
+    - If the provider defines `scopes` in `config/oidc_providers.yml`, set it to `openid email`
+    - If `scopes` is omitted, the fallback comes from `OidcConfig.scopes_for`, so update that default if you want repo-wide behavior without `profile`
 
 ---
 
